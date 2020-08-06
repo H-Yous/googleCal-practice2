@@ -5,8 +5,6 @@ const { getDates, calcDays, setEventObjects } = require("./functions.js");
 
 const TOKEN_PATH = "token.json";
 const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
-var start, end;
-var eventObjects = [];
 
 /**
  * Create an OAuth2 client with the given credentials, and then execute the
@@ -21,19 +19,18 @@ async function authorize(credentials, callback) {
     client_secret,
     redirect_uris[0]
   );
-
   // Check if we have previously stored a token.
-  fs.readFile(TOKEN_PATH, async (err, token) => {
-    if (err) return getAccessToken(oAuth2Client, callback);
-    oAuth2Client.setCredentials(JSON.parse(token));
-    promise = new Promise(async (resolve) => {
-      this.eventObjects = await callback(oAuth2Client);
-      if (this.eventObjects.length > 0) {
-        resolve(this.eventObjects);
-      }
-    });
-    setEventObjects(await promise);
-  });
+  var object;
+  object = new Promise(resolve => {
+    fs.readFile(TOKEN_PATH, async (err, token) => {
+      if (err) return getAccessToken(oAuth2Client, callback);
+      oAuth2Client.setCredentials(JSON.parse(token));
+      object = await callback(oAuth2Client);
+      resolve(object);
+    })
+  })
+  return await object
+
 }
 
 /**
