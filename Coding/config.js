@@ -1,7 +1,7 @@
 const fs = require("fs");
 const readline = require("readline");
 const { google } = require("googleapis");
-const { getDates, calcDays, setEventObjects } = require("./functions.js");
+const { getDates, setEventObjects } = require("./functions.js");
 
 const TOKEN_PATH = "token.json";
 const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
@@ -12,7 +12,7 @@ const SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"];
  * @param {Object} credentials The authorization client credentials.
  * @param {function} callback The callback to call with the authorized client.
  */
-async function authorize(credentials, callback) {
+function authorize(credentials, callback) {
   const { client_secret, client_id, redirect_uris } = credentials.installed;
   const oAuth2Client = new google.auth.OAuth2(
     client_id,
@@ -20,17 +20,18 @@ async function authorize(credentials, callback) {
     redirect_uris[0]
   );
   // Check if we have previously stored a token.
-  var object;
-  object = new Promise(resolve => {
+
+  return new Promise(resolve => {
     fs.readFile(TOKEN_PATH, async (err, token) => {
       if (err) return getAccessToken(oAuth2Client, callback);
       oAuth2Client.setCredentials(JSON.parse(token));
-      object = await callback(oAuth2Client);
-      resolve(object);
+      resolve(await callback(oAuth2Client));
     })
+  }).then((weekArray) => {
+    console.log('\n7. Resulting Day 1 object in array from ListEvents function:')
+    console.log(JSON.stringify(weekArray[0].events));
+    return weekArray;
   })
-  return await object
-
 }
 
 /**
@@ -71,25 +72,24 @@ function getAccessToken(oAuth2Client, callback) {
 async function listEvents(auth) {
   const calendar = google.calendar({ version: "v3", auth });
 
-  var promise = new Promise(async (resolve) => {
-    const days = calcDays()
+  return new Promise(async (resolve) => { 
+    days = 5;
     var count = 0;
-    var finalArray = [];
-    const dates = getDates()
-    var testCount = 3
-    console.log("Beginning While Loop")
+    var weekArray = [];
+    const dates = getDates(); //GET startDate and endDate
+    var testCount = 2
+    console.log("==== Beginning listEvents While Loop ====")
     while (count < days) {
-      dates.end.setDate(dates.start.getDate())
-      dates.end.setHours(23, 59, 59)
-      dates.start.setHours(00, 00, 00)
+      dates.endDate.setDate(dates.startDate.getDate())
+      dates.endDate.setHours(23, 59, 59)
+      dates.startDate.setHours(00, 00, 00)
 
       var array = new Promise((resolve) => {
-        testCount2 = 8
         calendar.events.list(
           {
             calendarId: "primary",
-            timeMin: dates.start.toISOString(),
-            timeMax: dates.end.toISOString(),
+            timeMin: dates.startDate.toISOString(),
+            timeMax: dates.endDate.toISOString(),
             maxResults: 1000,
             singleEvents: true,
             orderBy: "startTime",
@@ -120,15 +120,13 @@ async function listEvents(auth) {
           }
         );
       });
-      console.log(`${testCount++}. Date: ${dates.start.getDate()}/${dates.start.getMonth()}, Time: ${dates.start.getHours() +":"+ dates.start.getMinutes()} - ${dates.end.getHours()+":"+dates.end.getMinutes()}, day: ${dates.start.getDay()}, Event Amount: ${(await array).length}`)
-      finalArray.push({ day: dates.start.getUTCDay(), events: await array });
-      dates.start.setDate(dates.start.getDate() + 1);
+      console.log(`${testCount++}. Date: ${dates.startDate.getDate()}/${dates.startDate.getMonth()}, Time: ${dates.startDate.getHours() +":"+ dates.startDate.getMinutes()} - ${dates.endDate.getHours()+":"+dates.endDate.getMinutes()}, day: ${dates.startDate.getDay()}, Event Amount: ${(await array).length}`)
+      weekArray.push({ day: dates.startDate.getDay()-1, events: await array });
+      dates.startDate.setDate(dates.startDate.getDate() + 1);
       count++;
     }
-
-    resolve(finalArray);
+    resolve(weekArray);
   });
-  return await promise;
 }
 
 

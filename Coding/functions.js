@@ -3,10 +3,9 @@ const Papa = require("papaparse");
 const { resolve } = require("path");
 const { title } = require("process");
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
-var start, end;
-var eventObjects = [];
+var startDate, endDate;
 
-async function finalProduct(objects) {
+async function calculateDuplicates(objects) {
   let filteredEvents = await Promise.all(
     object = objects.map(async object => {
       switch(object.day){
@@ -25,6 +24,8 @@ async function finalProduct(objects) {
   ).then(object => {
     return object;
   })
+  console.log("\n8. Resulting Day 1 Object in Array from CalculateDuplicates Function:");
+  console.log(JSON.stringify(filteredEvents[0].events));
   return filteredEvents;
 }
 
@@ -54,25 +55,26 @@ async function emptyDescriptions(title) {
   })
 }
 
-function calcDays() {
-  var days;
-  if (this.end.getDate() > this.start.getDate()) {
-    days = this.end.getDate() - this.start.getDate();
-  } else {
-    switch (this.start.getMonth()) {
-      case (1, 3, 5, 7, 8, 10, 12):
-        //If the start date is the 30th and the end date is the 2nd.
-        //EITHER 31 - 30 + 2 OR 30 - 30 + 2 = 3 OR 2 respectively
-        days = 31 - this.start.getDate() + this.end.getDate();
-        break;
-      default:
-        days = 30 - this.start.getDate() + this.end.getDate();
-        break;
-    }
-  }
-  console.log(`2. Days: ${days}`);
-  return days;
-}
+// function calcDays() {
+//   var days;
+//   return 5;
+//   if (this.endDate.getDate() > this.startDate.getDate()) {
+//     days = this.endDate.getDate() - this.startDate.getDate();
+//   } else {
+//     switch (this.startDate.getMonth()) {
+//       case (1, 3, 5, 7, 8, 10, 12):
+//         //If the startDate date is the 30th and the end date is the 2nd.
+//         //EITHER 31 - 30 + 2 OR 30 - 30 + 2 = 3 OR 2 respectively
+//         days = 31 - this.startDate.getDate() + this.end.getDate();
+//         break;
+//       default:
+//         days = 30 - this.startDate.getDate() + this.end.getDate();
+//         break;
+//     }
+//   }
+//   console.log(`2. Days: ${days}`);
+//   return days;
+// }
 
 async function calcTimes(day) {
     var titles = [];
@@ -109,45 +111,28 @@ async function calcTimes(day) {
     return await eventObj;
 }
 
-function setDates(start) {
-  this.start = start;
-  this.end = new Date();
-  this.end.setDate(start.getDate() + 5)
-  this.end.setHours(23, 59, 00);
-  switch (this.start.getMonth()) {
-    case (1, 3, 5, 7, 8, 10, 12):
-      (this.start.getDate() >= 26) ? this.end.setMonth(start.getMonth()+1) : this.end.setMonth(start.getMonth())
+function setDates(startDate) {
+  //Set startDate date and end date
+  this.startDate = startDate;
+  this.endDate = new Date();
+  this.endDate.setDate(startDate.getDate() + 4) //End date is startDate date + 5
+  this.endDate.setHours(23, 59, 00); //Ends at the end of the 5th day
+  switch (this.startDate.getMonth()) {
+    case (1, 3, 5, 7, 8, 10, 12): //If months have 31 days, anything above 26th moves to next month.
+      (this.startDate.getDate() >= 26) ? this.endDate.setMonth(startDate.getMonth()+1) : this.endDate.setMonth(startDate.getMonth())
       break;
-    default:
-      (this.start.getDate() >= 25) ? this.end.setMonth(start.getMonth() + 1) : this.end.setMonth(start.getMonth())
+    default: //If months have 30 days, anything above 25 moves to next month
+      (this.startDate.getDate() > 25) ? this.endDate.setMonth(startDate.getMonth() + 1) : this.endDate.setMonth(startDate.getMonth())
       break;
   }
-  console.log(`1. Start date: ${this.start}, End date: ${this.end}`);
+  console.log(`1. startDate date: ${this.startDate}, endDate date: ${this.endDate}`);
 }
 
 function getDates() {
-  return { start: this.start, end: this.end };
+  return { startDate: this.startDate, endDate: this.endDate };
 }
 
-function setEventObjects(eventObjects) {
-  this.eventObjects = eventObjects;
-}
-
-async function getEventObjects() {
-  var promise = new Promise((resolve) => {
-    interval = setInterval(() => {
-      if (this.eventObjects.length > 0) {
-        clearInterval(interval);
-        return resolve(this.eventObjects);
-      } else {
-        console.log("2 seconds, Event Object is empty");
-      }
-    }, 2000);
-  });
-  return await promise;
-}
-
-async function printToCSV(objects) {
+function printToCSV(objects) {
   finalArray = objects.map(object => {
     newArray = [];
     object.events.forEach(event => {
@@ -158,7 +143,6 @@ async function printToCSV(objects) {
         time: event.time
       }])
     })
-    //console.log(newArray.length)
     return newArray;
   })
   count = 0;
@@ -166,10 +150,8 @@ async function printToCSV(objects) {
   while(count < finalArray.length){
     brandNew = brandNew.concat(finalArray[count]);
     count++
-    console.log(brandNew)
-    console.log("00000000000000000")
   }
-  console.log(brandNew)
+  console.log(`\n9. The created JSON from printToCSV ${JSON.stringify(brandNew)}`)
   const csvWriter = createCsvWriter({
     path: 'out.csv',
     header: [
@@ -179,18 +161,14 @@ async function printToCSV(objects) {
       {id: 'time', title: 'time'}
     ]
   });
-
   csvWriter
     .writeRecords(brandNew)
-    .then(() => console.log('The CSV file was written to successfully'))
+    .then(() => console.log('10. The CSV file was written to successfully!'))
 }
 
 module.exports = {
   setDates,
   getDates,
-  calcDays,
-  setEventObjects,
-  getEventObjects,
-  finalProduct,
+  calculateDuplicates,
   printToCSV
 };
